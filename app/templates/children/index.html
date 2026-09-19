@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stage_badge with context %}
+{% block title %}Students · {{ daycare_name }} CRM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Students</h1>
+    <p>{{ children | length }} {{ 'student' if children | length == 1 else 'students' }}{% if stage %} in {{ STAGE_LABELS[stage] }}{% endif %}.</p>
+  </div>
+  <div class="tag-list">
+    <a class="btn secondary" href="{{ url_for('children.export_csv') }}">Export CSV</a>
+    <a class="btn" href="{{ url_for('children.create') }}">Add student</a>
+  </div>
+</div>
+
+<form class="toolbar" method="get">
+  <div class="field" style="flex:1;min-width:220px">
+    <label for="q">Search</label>
+    <input type="search" id="q" name="q" value="{{ term }}" placeholder="Student or family name">
+  </div>
+  <div class="field" style="min-width:190px">
+    <label for="stage">Stage</label>
+    <select id="stage" name="stage">
+      <option value="">All stages</option>
+      {% for s in PIPELINE_STAGES %}<option value="{{ s }}" {{ 'selected' if s == stage }}>{{ STAGE_LABELS[s] }}</option>{% endfor %}
+      <optgroup label="Did not continue">
+        {% for s in EXIT_STAGES %}<option value="{{ s }}" {{ 'selected' if s == stage }}>{{ STAGE_LABELS[s] }}</option>{% endfor %}
+      </optgroup>
+    </select>
+  </div>
+  <button class="btn secondary" type="submit">Filter</button>
+  {% if term or stage %}<a class="btn secondary" href="{{ url_for('children.index') }}">Clear</a>{% endif %}
+</form>
+
+<div class="card">
+  {% if children %}
+  <table>
+    <thead>
+      <tr><th>Student</th><th>Family</th><th>Stage</th><th>Since</th><th>Inquiry</th><th>Reason</th></tr>
+    </thead>
+    <tbody>
+      {% for child in children %}
+      <tr>
+        <td>
+          <a href="{{ url_for('children.detail', child_id=child.id) }}"><strong>{{ child.full_name }}</strong></a>
+          {% if child.age_display %}<div class="hint">{{ child.age_display }}</div>{% endif %}
+        </td>
+        <td class="small">
+          <a href="{{ url_for('families.detail', family_id=child.family_id) }}">{{ child.family.family_name }}</a>
+          {% set contact = child.family.primary_guardian %}
+          {% if contact %}<div class="hint">{{ contact.phone or contact.email or contact.full_name }}</div>{% endif %}
+        </td>
+        <td>{{ stage_badge(child.stage) }}</td>
+        <td class="small muted">{{ child.stage_date | display_date }}</td>
+        <td class="small muted">{{ child.inquiry_date | display_date }}</td>
+        <td class="small muted">{{ child.exit_reason or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">
+    {% if term or stage %}No students match that filter.{% else %}No students yet. <a href="{{ url_for('children.create') }}">Add the first one</a>.{% endif %}
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

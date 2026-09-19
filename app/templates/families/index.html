@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stage_badge with context %}
+{% block title %}Families · {{ daycare_name }} CRM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Families</h1>
+    <p>{{ families | length }} {{ 'family' if families | length == 1 else 'families' }} on file.</p>
+  </div>
+  <a class="btn" href="{{ url_for('families.create') }}">Add family</a>
+</div>
+
+<form class="toolbar" method="get">
+  <div class="field" style="flex:1;min-width:240px">
+    <label for="q">Search</label>
+    <input type="search" id="q" name="q" value="{{ term }}" placeholder="Family name, parent name, email, or phone">
+  </div>
+  <button class="btn secondary" type="submit">Search</button>
+  {% if term %}<a class="btn secondary" href="{{ url_for('families.index') }}">Clear</a>{% endif %}
+</form>
+
+<div class="card">
+  {% if families %}
+  <table>
+    <thead>
+      <tr><th>Family</th><th>Primary contact</th><th>Children</th><th>Source</th></tr>
+    </thead>
+    <tbody>
+      {% for family in families %}
+      <tr>
+        <td>
+          <a href="{{ url_for('families.detail', family_id=family.id) }}"><strong>{{ family.family_name }}</strong></a>
+          {% if family.address_oneline %}<div class="hint">{{ family.address_oneline }}</div>{% endif %}
+        </td>
+        <td class="small">
+          {% set contact = family.primary_guardian %}
+          {% if contact %}
+            <div class="stack">
+              <span>{{ contact.full_name }}{% if contact.relationship_to_child %} <span class="muted">({{ contact.relationship_to_child }})</span>{% endif %}</span>
+              {% if contact.phone %}<span class="muted">{{ contact.phone }}</span>{% endif %}
+              {% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% endif %}
+            </div>
+          {% else %}<span class="muted">No contact yet</span>{% endif %}
+        </td>
+        <td>
+          {% if family.children %}
+          <div class="tag-list">
+            {% for child in family.children %}
+            <a href="{{ url_for('children.detail', child_id=child.id) }}" title="{{ child.full_name }} — {{ child.stage_display }}">
+              {{ stage_badge(child.stage) }}
+            </a>
+            {% endfor %}
+          </div>
+          <div class="hint">{{ family.children | map(attribute='first_name') | join(', ') }}</div>
+          {% else %}<span class="muted small">No children added</span>{% endif %}
+        </td>
+        <td class="small muted">{{ family.referral_source or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">
+    {% if term %}No families match “{{ term }}”.{% else %}No families yet. <a href="{{ url_for('families.create') }}">Add the first one</a>.{% endif %}
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

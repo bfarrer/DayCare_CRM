@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Team · {{ daycare_name }} CRM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Team</h1>
+    <p>Everyone here can view and edit all records. Deactivate an account to block sign-in without losing their history.</p>
+  </div>
+  <a class="btn" href="{{ url_for('users.create') }}">Add team member</a>
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Last signed in</th><th></th></tr></thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td><strong>{{ user.name }}</strong>{% if user.id == current_user.id %} <span class="muted small">(you)</span>{% endif %}</td>
+        <td class="small">{{ user.email }}</td>
+        <td>
+          {% if user.is_active_user %}<span class="badge stage-active">Active</span>
+          {% else %}<span class="badge stage-declined">Deactivated</span>{% endif %}
+        </td>
+        <td class="small muted">{{ user.last_login_at.strftime('%b %d, %Y') if user.last_login_at else 'Never' }}</td>
+        <td class="num">
+          <details>
+            <summary class="btn secondary small" style="display:inline-block;cursor:pointer">Manage</summary>
+            <div style="margin-top:10px;text-align:left">
+              <form method="post" action="{{ url_for('users.reset_password', user_id=user.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="field">
+                  <label for="pw-{{ user.id }}">Set a new password</label>
+                  <input type="password" id="pw-{{ user.id }}" name="password" autocomplete="new-password" minlength="10">
+                  <p class="hint">At least 10 characters. Tell them to change it after signing in.</p>
+                </div>
+                <button class="btn small" type="submit">Set password</button>
+              </form>
+              {% if user.id != current_user.id %}
+              <form method="post" action="{{ url_for('users.toggle_active', user_id=user.id) }}" style="margin-top:10px">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn {{ 'danger' if user.is_active_user else 'secondary' }} small" type="submit">
+                  {{ 'Deactivate' if user.is_active_user else 'Reactivate' }}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </details>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

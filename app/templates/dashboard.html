@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stage_badge, bar_row with context %}
+{% block title %}Dashboard · {{ daycare_name }} CRM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Enrollment dashboard</h1>
+    <p>{{ summary.total }} students tracked across {{ total_families }} families.</p>
+  </div>
+  <div class="tag-list">
+    <a class="btn" href="{{ url_for('children.create') }}">Add student</a>
+    <a class="btn secondary" href="{{ url_for('families.create') }}">Add family</a>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Open pipeline</div>
+    <div class="stat-value">{{ summary.open_pipeline }}</div>
+    <div class="stat-note">Not yet enrolled, declined, or graduated</div>
+  </div>
+  <div class="stat green">
+    <div class="stat-label">Currently enrolled</div>
+    <div class="stat-value">{{ summary.currently_enrolled }}</div>
+    <div class="stat-note">Enrolled or actively attending</div>
+  </div>
+  <div class="stat green">
+    <div class="stat-label">Inquiry → enrolled</div>
+    <div class="stat-value">{{ summary.inquiry_to_enroll_rate }}%</div>
+    <div class="stat-note">{{ summary.enrolled }} of {{ summary.inquiries }} inquiries</div>
+  </div>
+  <div class="stat neutral">
+    <div class="stat-label">Avg. days to enroll</div>
+    <div class="stat-value">{{ summary.avg_days_to_enroll if summary.avg_days_to_enroll is not none else '—' }}</div>
+    <div class="stat-note">From first inquiry to enrollment</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Declined</div>
+    <div class="stat-value">{{ summary.declined }}</div>
+    <div class="stat-note">Chose not to enroll</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Withdrew</div>
+    <div class="stat-value">{{ summary.withdrew }}</div>
+    <div class="stat-note">Left after enrolling</div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head">
+      <h2>Funnel</h2>
+      <a class="small" href="{{ url_for('reports.index') }}">Full reports →</a>
+    </div>
+    <p class="hint" style="margin-top:-8px">How many students have ever reached each stage, including those who later declined or withdrew.</p>
+    {% set max_reach = funnel[0].count if funnel and funnel[0].count else 1 %}
+    <div class="chart">
+      {% for row in funnel %}
+        {{ bar_row(row.label, row.count, max_reach, row.pct_of_inquiries ~ '%', 'green' if loop.index0 >= 3 else none) }}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Where everyone stands</h2></div>
+    <table>
+      <thead><tr><th>Stage</th><th class="num">Students</th></tr></thead>
+      <tbody>
+        {% for stage, count in stage_counts.items() %}
+        <tr>
+          <td>
+            <a href="{{ url_for('children.index', stage=stage) }}">{{ stage_badge(stage) }}</a>
+            <div class="hint">{{ STAGE_DESCRIPTIONS.get(stage, '') }}</div>
+          </td>
+          <td class="num">{{ count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Upcoming tours</h2></div>
+    {% if upcoming_tours %}
+    <table>
+      <thead><tr><th>Date</th><th>Student</th><th>Family contact</th></tr></thead>
+      <tbody>
+        {% for child in upcoming_tours %}
+        <tr>
+          <td>{{ child.tour_scheduled_date | display_date }}</td>
+          <td><a href="{{ url_for('children.detail', child_id=child.id) }}">{{ child.full_name }}</a></td>
+          <td class="small">
+            {% set contact = child.family.primary_guardian %}
+            {% if contact %}{{ contact.full_name }}<br><span class="muted">{{ contact.phone or contact.email or '' }}</span>{% else %}<span class="muted">No contact on file</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No tours are scheduled.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Needs follow-up</h2></div>
+    <p class="hint" style="margin-top:-8px">Open pipeline, but nothing has happened in over a week.</p>
+    {% if follow_ups %}
+    <table>
+      <thead><tr><th>Student</th><th>Stage</th><th>Last activity</th></tr></thead>
+      <tbody>
+        {% for row in follow_ups %}
+        <tr>
+          <td><a href="{{ url_for('children.detail', child_id=row.child.id) }}">{{ row.child.full_name }}</a></td>
+          <td>{{ stage_badge(row.child.stage) }}</td>
+          <td class="small muted">{{ row.last_touch | display_date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Everyone in the pipeline has been contacted recently.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Inquiries and enrollments by month</h2></div>
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:#c81c22"></span> Inquiries</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#93bd37"></span> Enrolled</span>
+  </div>
+  {% set peak = (monthly | map(attribute='inquiries') | max) if monthly else 0 %}
+  {% set peak = peak if peak and peak > 0 else 1 %}
+  <div class="trend">
+    {% for month in monthly %}
+    <div class="trend-month">
+      <div class="trend-counts">{{ month.inquiries }} / {{ month.enrolled }}</div>
+      <div class="trend-bars">
+        <div class="trend-bar" style="height: {{ (month.inquiries / peak * 110) | round(1) }}px"
+             title="{{ month.label }}: {{ month.inquiries }} inquiries"></div>
+        <div class="trend-bar enrolled" style="height: {{ (month.enrolled / peak * 110) | round(1) }}px"
+             title="{{ month.label }}: {{ month.enrolled }} enrolled"></div>
+      </div>
+      <div class="trend-label">{{ month.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

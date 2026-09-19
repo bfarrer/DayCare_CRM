@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stage_badge with context %}
+{% block title %}{{ family.family_name }} · {{ daycare_name }} CRM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ family.family_name }}</h1>
+    <p>{{ family.address_oneline or 'No address on file' }}</p>
+  </div>
+  <div class="tag-list">
+    <a class="btn secondary" href="{{ url_for('families.edit', family_id=family.id) }}">Edit family</a>
+    <a class="btn" href="{{ url_for('children.create', family_id=family.id) }}">Add student</a>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Parents &amp; guardians</h2></div>
+    {% if family.guardians %}
+    <table>
+      <thead><tr><th>Name</th><th>Contact</th><th></th></tr></thead>
+      <tbody>
+        {% for guardian in family.guardians %}
+        <tr>
+          <td>
+            <strong>{{ guardian.full_name }}</strong>
+            {% if guardian.is_primary %}<span class="badge stage-active">Primary</span>{% endif %}
+            <div class="hint">{{ guardian.relationship_to_child or 'Relationship not recorded' }}</div>
+          </td>
+          <td class="small">
+            <div class="stack">
+              {% if guardian.phone %}<a href="tel:{{ guardian.phone }}">{{ guardian.phone }}</a>{% endif %}
+              {% if guardian.email %}<a href="mailto:{{ guardian.email }}">{{ guardian.email }}</a>{% endif %}
+              {% if not guardian.phone and not guardian.email %}<span class="muted">No contact details</span>{% endif %}
+            </div>
+          </td>
+          <td class="num">
+            <details>
+              <summary class="btn secondary small" style="display:inline-block;cursor:pointer">Edit</summary>
+              <form method="post" action="{{ url_for('families.edit_guardian', guardian_id=guardian.id) }}" style="margin-top:10px;text-align:left">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="field-row">
+                  <div class="field">
+                    <label>First name</label>
+                    <input type="text" name="first_name" value="{{ guardian.first_name }}" required>
+                  </div>
+                  <div class="field">
+                    <label>Last name</label>
+                    <input type="text" name="last_name" value="{{ guardian.last_name }}" required>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label>Relationship</label>
+                    <select name="relationship_to_child">
+                      <option value="">—</option>
+                      {% for rel in GUARDIAN_RELATIONSHIPS %}
+                      <option value="{{ rel }}" {{ 'selected' if rel == guardian.relationship_to_child }}>{{ rel }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Email</label>
+                    <input type="email" name="email" value="{{ guardian.email or '' }}">
+                  </div>
+                  <div class="field">
+                    <label>Phone</label>
+                    <input type="tel" name="phone" value="{{ guardian.phone or '' }}">
+                  </div>
+                </div>
+                <div class="field checkbox">
+                  <input type="checkbox" id="primary-{{ guardian.id }}" name="is_primary" value="1" {{ 'checked' if guardian.is_primary }}>
+                  <label for="primary-{{ guardian.id }}" style="margin:0">Primary contact</label>
+                </div>
+                <div class="form-actions">
+                  <button class="btn small" type="submit">Save</button>
+                </div>
+              </form>
+              <form method="post" action="{{ url_for('families.delete_guardian', guardian_id=guardian.id) }}"
+                    onsubmit="return confirm('Remove {{ guardian.full_name }} from this family?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn danger small" type="submit">Remove contact</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No parents or guardians recorded yet.</p>
+    {% endif %}
+
+    <details style="margin-top:14px">
+      <summary class="btn secondary small" style="display:inline-block;cursor:pointer">Add a parent or guardian</summary>
+      <form method="post" action="{{ url_for('families.add_guardian', family_id=family.id) }}" style="margin-top:14px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field-row">
+          <div class="field">
+            <label for="g_first">First name</label>
+            <input type="text" id="g_first" name="first_name" required>
+          </div>
+          <div class="field">
+            <label for="g_last">Last name</label>
+            <input type="text" id="g_last" name="last_name" required>
+          </div>
+          <div class="field">
+            <label for="g_rel">Relationship</label>
+            <select id="g_rel" name="relationship_to_child">
+              <option value="">—</option>
+              {% for rel in GUARDIAN_RELATIONSHIPS %}<option value="{{ rel }}">{{ rel }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="g_email">Email</label>
+            <input type="email" id="g_email" name="email">
+          </div>
+          <div class="field">
+            <label for="g_phone">Phone</label>
+            <input type="tel" id="g_phone" name="phone">
+          </div>
+        </div>
+        <div class="field checkbox">
+          <input type="checkbox" id="g_primary" name="is_primary" value="1">
+          <label for="g_primary" style="margin:0">Make this the primary contact</label>
+        </div>
+        <button class="btn" type="submit">Add contact</button>
+      </form>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Students</h2>
+      <a class="small" href="{{ url_for('children.create', family_id=family.id) }}">Add student</a>
+    </div>
+    {% if family.children %}
+    <table>
+      <thead><tr><th>Student</th><th>Stage</th><th>Key date</th></tr></thead>
+      <tbody>
+        {% for child in family.children %}
+        <tr>
+          <td>
+            <a href="{{ url_for('children.detail', child_id=child.id) }}"><strong>{{ child.full_name }}</strong></a>
+            <div class="hint">{{ child.age_display or 'Date of birth not recorded' }}{% if child.classroom %} · {{ child.classroom }}{% endif %}</div>
+          </td>
+          <td>{{ stage_badge(child.stage) }}</td>
+          <td class="small muted">{{ child.stage_date | display_date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No students yet. <a href="{{ url_for('children.create', family_id=family.id) }}">Add one</a>.</p>
+    {% endif %}
+
+    {% if family.notes %}
+    <div class="divider"></div>
+    <h3>Notes</h3>
+    <p class="small">{{ family.notes }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Contact log</h2></div>
+
+  <details style="margin-bottom:16px">
+    <summary class="btn small" style="display:inline-block;cursor:pointer">Log a contact</summary>
+    <form method="post" action="{{ url_for('families.add_interaction', family_id=family.id) }}" style="margin-top:14px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field-row">
+        <div class="field">
+          <label for="interaction_type">Type</label>
+          <select id="interaction_type" name="interaction_type">
+            {% for type in INTERACTION_TYPES %}<option value="{{ type }}">{{ type }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="occurred_on">Date</label>
+          <input type="date" id="occurred_on" name="occurred_on" value="{{ today_iso }}">
+        </div>
+        <div class="field">
+          <label for="child_id">About which student?</label>
+          <select id="child_id" name="child_id">
+            <option value="">The whole family</option>
+            {% for child in family.children %}<option value="{{ child.id }}">{{ child.full_name }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="summary">Summary</label>
+        <input type="text" id="summary" name="summary" placeholder="e.g. Called about September openings">
+      </div>
+      <div class="field">
+        <label for="body">Details</label>
+        <textarea id="body" name="body"></textarea>
+      </div>
+      <button class="btn" type="submit">Save to log</button>
+    </form>
+  </details>
+
+  {% if family.interactions %}
+  <table>
+    <thead><tr><th>Date</th><th>Type</th><th>What happened</th><th>Logged by</th></tr></thead>
+    <tbody>
+      {% for item in family.interactions %}
+      <tr>
+        <td class="small">{{ item.occurred_on | display_date }}</td>
+        <td class="small">{{ item.interaction_type }}</td>
+        <td>
+          {% if item.summary %}<strong>{{ item.summary }}</strong>{% endif %}
+          {% if item.child %}<span class="muted small"> · {{ item.child.full_name }}</span>{% endif %}
+          {% if item.body %}<div class="small">{{ item.body }}</div>{% endif %}
+        </td>
+        <td class="small muted">{{ item.user.name if item.user else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Nothing logged yet.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h3>Danger zone</h3></div>
+  <p class="small muted">Deleting a family also deletes its guardians, students, funnel history, and contact log. This cannot be undone.</p>
+  <form method="post" action="{{ url_for('families.delete', family_id=family.id) }}"
+        onsubmit="return confirm('Permanently delete {{ family.family_name }} and all of their records?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn danger" type="submit">Delete this family</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Pipeline · {{ daycare_name }} CRM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Pipeline</h1>
+    <p>Every student currently sitting in each stage. Open one to move it along.</p>
+  </div>
+  <a class="btn" href="{{ url_for('children.create') }}">Add student</a>
+</div>
+
+<div class="board">
+  {% for column in columns %}
+  <div class="board-col">
+    <div class="board-col-head">
+      <strong>{{ column.label }}</strong>
+      <span class="board-count">{{ column.children | length }}</span>
+    </div>
+    <div class="board-body">
+      {% for child in column.children %}
+      <div class="board-card">
+        <a href="{{ url_for('children.detail', child_id=child.id) }}">{{ child.full_name }}</a>
+        <div class="meta">{{ child.family.family_name }}</div>
+        {% if child.stage_date %}<div class="meta">{{ child.stage_date | display_date }}</div>{% endif %}
+      </div>
+      {% else %}
+      <div class="board-empty">Empty</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card" style="margin-top:20px">
+  <div class="card-head"><h2>Did not continue</h2></div>
+  <div class="tag-list">
+    {% for stage, count in exits.items() %}
+    <a class="btn secondary small" href="{{ url_for('children.index', stage=stage) }}">
+      {{ STAGE_LABELS[stage] }}: {{ count }}
+    </a>
+    {% endfor %}
+    <a class="btn secondary small" href="{{ url_for('reports.index') }}">See the reasons →</a>
+  </div>
+</div>
+{% endblock %}
