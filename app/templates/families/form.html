@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit family' if family else 'Add family' }} · {{ daycare_name }} CRM{% endblock %}
+
+{% macro value(field, fallback) -%}
+{{ form.get(field) if form.get(field) is not none else (fallback if fallback is not none else '') }}
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ 'Edit family' if family else 'Add a family' }}</h1></div>
+</div>
+
+<div class="card" style="max-width:780px">
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <fieldset>
+    <legend>Household</legend>
+    <div class="field">
+      <label for="family_name">Family name <span class="muted">(required)</span></label>
+      <input type="text" id="family_name" name="family_name" required
+             value="{{ value('family_name', family.family_name if family) }}" placeholder="e.g. The Alvarez Family">
+    </div>
+    <div class="field">
+      <label for="address_line1">Address</label>
+      <input type="text" id="address_line1" name="address_line1" value="{{ value('address_line1', family.address_line1 if family) }}">
+    </div>
+    <div class="field">
+      <label for="address_line2">Address line 2</label>
+      <input type="text" id="address_line2" name="address_line2" value="{{ value('address_line2', family.address_line2 if family) }}">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="city">City</label>
+        <input type="text" id="city" name="city" value="{{ value('city', family.city if family) }}">
+      </div>
+      <div class="field">
+        <label for="state">State</label>
+        <input type="text" id="state" name="state" value="{{ value('state', family.state if family) }}">
+      </div>
+      <div class="field">
+        <label for="postal_code">ZIP</label>
+        <input type="text" id="postal_code" name="postal_code" value="{{ value('postal_code', family.postal_code if family) }}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="referral_source">How did they hear about us?</label>
+        <select id="referral_source" name="referral_source">
+          <option value="">Not recorded</option>
+          {% set current_source = value('referral_source', family.referral_source if family) | trim %}
+          {% for source in REFERRAL_SOURCES %}
+          <option value="{{ source }}" {{ 'selected' if source == current_source }}>{{ source }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="preferred_contact_method">Preferred contact method</label>
+        <select id="preferred_contact_method" name="preferred_contact_method">
+          <option value="">No preference</option>
+          {% set current_method = value('preferred_contact_method', family.preferred_contact_method if family) | trim %}
+          {% for method in CONTACT_METHODS %}
+          <option value="{{ method }}" {{ 'selected' if method == current_method }}>{{ method }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes">{{ value('notes', family.notes if family) }}</textarea>
+    </div>
+  </fieldset>
+
+  {% if not family %}
+  <fieldset>
+    <legend>Primary parent or guardian</legend>
+    <p class="hint" style="margin-top:0">Optional here — you can add contacts (and more of them) after saving.</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="guardian_first_name">First name</label>
+        <input type="text" id="guardian_first_name" name="guardian_first_name" value="{{ form.get('guardian_first_name', '') }}">
+      </div>
+      <div class="field">
+        <label for="guardian_last_name">Last name</label>
+        <input type="text" id="guardian_last_name" name="guardian_last_name" value="{{ form.get('guardian_last_name', '') }}">
+      </div>
+      <div class="field">
+        <label for="guardian_relationship">Relationship</label>
+        <select id="guardian_relationship" name="guardian_relationship">
+          <option value="">—</option>
+          {% for rel in GUARDIAN_RELATIONSHIPS %}<option value="{{ rel }}">{{ rel }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="guardian_email">Email</label>
+        <input type="email" id="guardian_email" name="guardian_email" value="{{ form.get('guardian_email', '') }}">
+      </div>
+      <div class="field">
+        <label for="guardian_phone">Phone</label>
+        <input type="tel" id="guardian_phone" name="guardian_phone" value="{{ form.get('guardian_phone', '') }}">
+      </div>
+    </div>
+  </fieldset>
+  {% endif %}
+
+  <div class="form-actions">
+    <button class="btn" type="submit">{{ 'Save changes' if family else 'Add family' }}</button>
+    <a class="btn secondary" href="{{ url_for('families.detail', family_id=family.id) if family else url_for('families.index') }}">Cancel</a>
+  </div>
+</form>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}My account · {{ daycare_name }} CRM{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>My account</h1>
+    <p>Signed in as {{ current_user.email }}</p>
+  </div>
+</div>
+
+<div class="card" style="max-width:520px">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="name">Your name</label>
+      <input type="text" id="name" name="name" value="{{ current_user.name }}" required>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label for="current_password">Current password</label>
+      <input type="password" id="current_password" name="current_password" required autocomplete="current-password">
+      <p class="hint">Required to save any change.</p>
+    </div>
+    <div class="field">
+      <label for="new_password">New password <span class="muted">(leave blank to keep the current one)</span></label>
+      <input type="password" id="new_password" name="new_password" autocomplete="new-password">
+      <p class="hint">At least 10 characters.</p>
+    </div>
+    <div class="field">
+      <label for="confirm_password">Confirm new password</label>
+      <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password">
+    </div>
+
+    <div class="form-actions">
+      <button class="btn" type="submit">Save changes</button>
+      <a class="btn secondary" href="{{ url_for('dashboard.index') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

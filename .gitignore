@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+
+# Local database + secrets — never commit real family data
+instance/
+*.db
+*.sqlite3
+.env
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

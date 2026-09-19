@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ daycare_name }} CRM{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('dashboard.index') }}">
+      <span class="brand-mark">RF</span> {{ daycare_name }}
+    </a>
+    <nav class="nav">
+      <a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if request.blueprint == 'dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('children.board') }}" class="{{ 'active' if request.endpoint == 'children.board' }}">Pipeline</a>
+      <a href="{{ url_for('children.index') }}" class="{{ 'active' if request.blueprint == 'children' and request.endpoint != 'children.board' }}">Students</a>
+      <a href="{{ url_for('families.index') }}" class="{{ 'active' if request.blueprint == 'families' }}">Families</a>
+      <a href="{{ url_for('reports.index') }}" class="{{ 'active' if request.blueprint == 'reports' }}">Reports</a>
+      <a href="{{ url_for('users.index') }}" class="{{ 'active' if request.blueprint == 'users' }}">Team</a>
+    </nav>
+    <div class="topbar-user">
+      <a href="{{ url_for('auth.account') }}">{{ current_user.name }}</a>
+      <a href="{{ url_for('auth.logout') }}">Sign out</a>
+    </div>
+  </div>
+</header>
+{% endif %}
+
+<main class="page">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flashes">
+      {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

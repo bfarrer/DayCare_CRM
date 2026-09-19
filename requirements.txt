@@ -1,0 +1,11 @@
+Flask==3.1.3
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-WTF==1.2.2
+SQLAlchemy==2.0.44
+python-dotenv==1.1.1
+
+# --- Shared-database (Postgres) deployment only ---
+# Uncomment when you move off the local SQLite prototype, then set
+# DATABASE_URL=postgresql+psycopg://user:password@host:5432/daycare_crm
+# psycopg[binary]==3.2.3

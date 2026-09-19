@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit student' if child else 'Add student' }} · {{ daycare_name }} CRM{% endblock %}
+
+{% macro value(field, fallback) -%}
+{{ form.get(field) if form.get(field) is not none else (fallback if fallback is not none else '') }}
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ 'Edit student' if child else 'Add a student' }}</h1>
+    {% if not child %}<p>New students start at the Inquiry stage. You can move them along from their page.</p>{% endif %}
+  </div>
+</div>
+
+<div class="card" style="max-width:780px">
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="field-row">
+    <div class="field">
+      <label for="first_name">First name <span class="muted">(required)</span></label>
+      <input type="text" id="first_name" name="first_name" required value="{{ value('first_name', child.first_name if child) }}">
+    </div>
+    <div class="field">
+      <label for="last_name">Last name <span class="muted">(required)</span></label>
+      <input type="text" id="last_name" name="last_name" required value="{{ value('last_name', child.last_name if child) }}">
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="family_id">Family <span class="muted">(required)</span></label>
+    {% set selected_family = (form.get('family_id') | int) if form.get('family_id') else (child.family_id if child else 0) %}
+    <select id="family_id" name="family_id" required>
+      <option value="">Choose a family…</option>
+      {% for family in families %}
+      <option value="{{ family.id }}" {{ 'selected' if family.id == selected_family }}>{{ family.family_name }}</option>
+      {% endfor %}
+    </select>
+    <p class="hint">Not listed? <a href="{{ url_for('families.create') }}">Add the family first</a>.</p>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="date_of_birth">Date of birth</label>
+      <input type="date" id="date_of_birth" name="date_of_birth" value="{{ value('date_of_birth', child.date_of_birth | date_input if child) }}">
+    </div>
+    <div class="field">
+      <label for="inquiry_date">Inquiry date</label>
+      <input type="date" id="inquiry_date" name="inquiry_date" value="{{ value('inquiry_date', child.inquiry_date | date_input if child) }}">
+      <p class="hint">When the family first reached out.</p>
+    </div>
+    <div class="field">
+      <label for="desired_start_date">Desired start date</label>
+      <input type="date" id="desired_start_date" name="desired_start_date" value="{{ value('desired_start_date', child.desired_start_date | date_input if child) }}">
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="program">Program</label>
+      <input type="text" id="program" name="program" value="{{ value('program', child.program if child) }}" placeholder="e.g. Full-time, 3 days">
+    </div>
+    <div class="field">
+      <label for="classroom">Classroom</label>
+      <input type="text" id="classroom" name="classroom" value="{{ value('classroom', child.classroom if child) }}" placeholder="e.g. Toddler A">
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="notes">Notes</label>
+    <textarea id="notes" name="notes">{{ value('notes', child.notes if child) }}</textarea>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn" type="submit">{{ 'Save changes' if child else 'Add student' }}</button>
+    <a class="btn secondary" href="{{ url_for('children.detail', child_id=child.id) if child else url_for('children.index') }}">Cancel</a>
+  </div>
+</form>
+</div>
+{% endblock %}

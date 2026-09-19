@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stage_badge, bar_row with context %}
+{% block title %}Reports · {{ daycare_name }} CRM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Reports</h1>
+    <p>Based on {{ summary.total }} students who inquired between
+       {{ start | display_date }} and {{ end | display_date }}.</p>
+  </div>
+  <a class="btn secondary" href="{{ url_for('children.export_csv') }}">Export all students (CSV)</a>
+</div>
+
+<form class="toolbar" method="get">
+  <div class="field">
+    <label for="start">Inquiries from</label>
+    <input type="date" id="start" name="start" value="{{ start | date_input }}">
+  </div>
+  <div class="field">
+    <label for="end">through</label>
+    <input type="date" id="end" name="end" value="{{ end | date_input }}">
+  </div>
+  <button class="btn secondary" type="submit">Apply</button>
+  <a class="btn secondary" href="{{ url_for('reports.index') }}">Last 12 months</a>
+</form>
+
+<div class="stats">
+  <div class="stat"><div class="stat-label">Inquiries</div><div class="stat-value">{{ summary.inquiries }}</div></div>
+  <div class="stat green"><div class="stat-label">Toured</div><div class="stat-value">{{ summary.toured }}</div>
+    <div class="stat-note">{{ summary.tour_rate }}% of inquiries</div></div>
+  <div class="stat green"><div class="stat-label">Enrolled</div><div class="stat-value">{{ summary.enrolled }}</div>
+    <div class="stat-note">{{ summary.tour_to_enroll_rate }}% of those who toured</div></div>
+  <div class="stat green"><div class="stat-label">Started (active)</div><div class="stat-value">{{ summary.started }}</div></div>
+  <div class="stat"><div class="stat-label">Declined</div><div class="stat-value">{{ summary.declined }}</div></div>
+  <div class="stat"><div class="stat-label">Withdrew</div><div class="stat-value">{{ summary.withdrew }}</div></div>
+  <div class="stat neutral"><div class="stat-label">Avg. days to enroll</div>
+    <div class="stat-value">{{ summary.avg_days_to_enroll if summary.avg_days_to_enroll is not none else '—' }}</div></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Conversion funnel</h2></div>
+  <p class="hint" style="margin-top:-8px">Counted from recorded stage dates, so a family who toured and later declined still counts as having toured. The waitlist is an optional branch, so step conversion skips it and compares each stage to the last required one.</p>
+  {% set max_reach = funnel[0].count if funnel and funnel[0].count else 1 %}
+  <div class="chart" style="margin-bottom:18px">
+    {% for row in funnel %}
+      {{ bar_row(row.label, row.count, max_reach, row.pct_of_inquiries ~ '%', 'green' if loop.index0 >= 3 else none) }}
+    {% endfor %}
+  </div>
+  <table>
+    <thead><tr><th>Stage</th><th class="num">Reached</th><th class="num">% of inquiries</th><th class="num">% of previous stage</th></tr></thead>
+    <tbody>
+      {% for row in funnel %}
+      <tr>
+        <td>{{ row.label }}{% if row.optional %} <span class="muted small">(optional branch)</span>{% endif %}</td>
+        <td class="num">{{ row.count }}</td>
+        <td class="num">{{ row.pct_of_inquiries }}%</td>
+        <td class="num">{{ (row.pct_of_previous ~ '%') if row.pct_of_previous is not none else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Why families declined</h2></div>
+    {% if decline_reasons %}
+    {% set max_decline = decline_reasons[0].count %}
+    <div class="chart" style="margin-bottom:16px">
+      {% for row in decline_reasons %}
+        {{ bar_row(row.reason, row.count, max_decline, row.pct ~ '%', none) }}
+      {% endfor %}
+    </div>
+    <table>
+      <thead><tr><th>Reason</th><th class="num">Count</th><th class="num">Share</th></tr></thead>
+      <tbody>
+        {% for row in decline_reasons %}
+        <tr><td>{{ row.reason }}</td><td class="num">{{ row.count }}</td><td class="num">{{ row.pct }}%</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No declines recorded in this window.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Why families withdrew</h2></div>
+    {% if withdraw_reasons %}
+    {% set max_withdraw = withdraw_reasons[0].count %}
+    <div class="chart" style="margin-bottom:16px">
+      {% for row in withdraw_reasons %}
+        {{ bar_row(row.reason, row.count, max_withdraw, row.pct ~ '%', 'muted') }}
+      {% endfor %}
+    </div>
+    <table>
+      <thead><tr><th>Reason</th><th class="num">Count</th><th class="num">Share</th></tr></thead>
+      <tbody>
+        {% for row in withdraw_reasons %}
+        <tr><td>{{ row.reason }}</td><td class="num">{{ row.count }}</td><td class="num">{{ row.pct }}%</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No withdrawals recorded in this window.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Where inquiries come from</h2></div>
+  {% if sources %}
+  <table>
+    <thead><tr><th>Source</th><th class="num">Inquiries</th><th class="num">Enrolled</th><th class="num">Conversion</th></tr></thead>
+    <tbody>
+      {% for row in sources %}
+      <tr>
+        <td>{{ row.source }}</td>
+        <td class="num">{{ row.inquiries }}</td>
+        <td class="num">{{ row.enrolled }}</td>
+        <td class="num">{{ row.rate }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No inquiries in this window.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Inquiries and enrollments by month</h2></div>
+  <p class="hint" style="margin-top:-8px">All time, independent of the date filter above.</p>
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:#c81c22"></span> Inquiries</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#93bd37"></span> Enrolled</span>
+  </div>
+  {% set peak = (monthly | map(attribute='inquiries') | max) if monthly else 0 %}
+  {% set peak = peak if peak and peak > 0 else 1 %}
+  <div class="trend">
+    {% for month in monthly %}
+    <div class="trend-month">
+      <div class="trend-counts">{{ month.inquiries }} / {{ month.enrolled }}</div>
+      <div class="trend-bars">
+        <div class="trend-bar" style="height: {{ (month.inquiries / peak * 110) | round(1) }}px"
+             title="{{ month.label }}: {{ month.inquiries }} inquiries"></div>
+        <div class="trend-bar enrolled" style="height: {{ (month.enrolled / peak * 110) | round(1) }}px"
+             title="{{ month.label }}: {{ month.enrolled }} enrolled"></div>
+      </div>
+      <div class="trend-label">{{ month.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Students in this window</h2></div>
+  {% if children %}
+  <table>
+    <thead><tr><th>Student</th><th>Family</th><th>Stage</th><th>Inquiry</th><th>Enrolled</th><th>Reason if closed</th></tr></thead>
+    <tbody>
+      {% for child in children %}
+      <tr>
+        <td><a href="{{ url_for('children.detail', child_id=child.id) }}">{{ child.full_name }}</a></td>
+        <td class="small">{{ child.family.family_name }}</td>
+        <td>{{ stage_badge(child.stage) }}</td>
+        <td class="small muted">{{ child.inquiry_date | display_date }}</td>
+        <td class="small muted">{{ child.enrolled_date | display_date }}</td>
+        <td class="small muted">{{ child.exit_reason or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No students inquired in this window.</p>
+  {% endif %}
+</div>
+{% endblock %}

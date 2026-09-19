@@ -1,0 +1,81 @@
+{# Shared snippets: stage badges and the stage-change form. #}
+
+{% macro stage_badge(stage) -%}
+<span class="badge stage-{{ stage }}">{{ STAGE_LABELS.get(stage, stage) }}</span>
+{%- endmacro %}
+
+{% macro bar_row(label, count, max_value, extra, variant) -%}
+<div class="chart-row">
+  <div class="chart-label">{{ label }}</div>
+  <div class="chart-track">
+    <div class="chart-bar {{ variant or '' }}"
+         style="width: {{ ((count / max_value * 100) if max_value else 0) | round(1) }}%"
+         title="{{ label }}: {{ count }}"></div>
+  </div>
+  <div class="chart-value">{{ count }}{% if extra %} <span class="pct">{{ extra }}</span>{% endif %}</div>
+</div>
+{%- endmacro %}
+
+{% macro stage_form(child) -%}
+<form method="post" action="{{ url_for('children.update_stage', child_id=child.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field-row">
+    <div class="field">
+      <label for="stage">Move to stage</label>
+      <select id="stage" name="stage" required onchange="toggleReason(this.value)">
+        {% for stage in PIPELINE_STAGES %}
+        <option value="{{ stage }}" {{ 'selected' if stage == child.stage }}>{{ STAGE_LABELS[stage] }}</option>
+        {% endfor %}
+        <optgroup label="Did not continue">
+          {% for stage in EXIT_STAGES %}
+          <option value="{{ stage }}" {{ 'selected' if stage == child.stage }}>{{ STAGE_LABELS[stage] }}</option>
+          {% endfor %}
+        </optgroup>
+      </select>
+    </div>
+    <div class="field">
+      <label for="occurred_on">Date</label>
+      <input type="date" id="occurred_on" name="occurred_on" value="{{ today_iso }}">
+    </div>
+  </div>
+
+  <div class="field" id="reason-declined" style="display:none">
+    <label for="reason_declined">Why did they decline?</label>
+    <select id="reason_declined" name="reason" disabled>
+      <option value="">Choose a reason…</option>
+      {% for reason in DECLINE_REASONS %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <div class="field" id="reason-withdrew" style="display:none">
+    <label for="reason_withdrew">Why did they withdraw?</label>
+    <select id="reason_withdrew" name="reason" disabled>
+      <option value="">Choose a reason…</option>
+      {% for reason in WITHDRAW_REASONS %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="note">Note <span class="muted">(optional)</span></label>
+    <textarea id="note" name="note" placeholder="Anything worth remembering about this change"></textarea>
+  </div>
+
+  <button class="btn" type="submit">Save stage</button>
+</form>
+
+<script>
+  // Only one reason dropdown is ever enabled, so exactly one `reason` value posts.
+  function toggleReason(stage) {
+    var map = { declined: 'reason-declined', withdrew: 'reason-withdrew' };
+    ['reason-declined', 'reason-withdrew'].forEach(function (id) {
+      var wrap = document.getElementById(id);
+      var select = wrap.querySelector('select');
+      var show = map[stage] === id;
+      wrap.style.display = show ? 'block' : 'none';
+      select.disabled = !show;
+      select.required = show;
+    });
+  }
+  toggleReason(document.getElementById('stage').value);
+</script>
+{%- endmacro %}

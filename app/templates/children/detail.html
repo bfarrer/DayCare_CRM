@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stage_badge, stage_form with context %}
+{% block title %}{{ child.full_name }} · {{ daycare_name }} CRM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ child.full_name }} {{ stage_badge(child.stage) }}</h1>
+    <p>
+      <a href="{{ url_for('families.detail', family_id=child.family_id) }}">{{ child.family.family_name }}</a>
+      {% if child.age_display %} · {{ child.age_display }}{% endif %}
+      {% if child.classroom %} · {{ child.classroom }}{% endif %}
+    </p>
+  </div>
+  <a class="btn secondary" href="{{ url_for('children.edit', child_id=child.id) }}">Edit details</a>
+</div>
+
+{% if child.stage in EXIT_STAGES %}
+<div class="card" style="border-left:4px solid var(--brand-red)">
+  <h3 style="margin-bottom:6px">{{ STAGE_LABELS[child.stage] }}
+    on {{ (child.declined_date if child.stage == 'declined' else child.withdrew_date) | display_date }}</h3>
+  <p style="margin:0"><strong>Reason:</strong> {{ child.exit_reason or 'Not recorded' }}</p>
+  {% set exit_notes = child.decline_notes if child.stage == 'declined' else child.withdraw_notes %}
+  {% if exit_notes %}<p class="small muted" style="margin:6px 0 0">{{ exit_notes }}</p>{% endif %}
+</div>
+{% endif %}
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Funnel history</h2></div>
+    {% if timeline %}
+    <ul class="timeline">
+      {% for item in timeline %}
+      <li class="{{ 'exit' if item.stage in EXIT_STAGES }}">
+        <strong>{{ item.label }}</strong>
+        <div class="when">{{ item.date | display_date }}</div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">No stage dates recorded yet.</p>
+    {% endif %}
+
+    <div class="divider"></div>
+    <h3>Details</h3>
+    <table>
+      <tbody>
+        <tr><td>Date of birth</td><td class="num">{{ child.date_of_birth | display_date }}</td></tr>
+        <tr><td>Desired start</td><td class="num">{{ child.desired_start_date | display_date }}</td></tr>
+        <tr><td>Program</td><td class="num">{{ child.program or '—' }}</td></tr>
+        <tr><td>Days inquiry → enrolled</td>
+            <td class="num">{{ child.days_inquiry_to_enrolled if child.days_inquiry_to_enrolled is not none else '—' }}</td></tr>
+      </tbody>
+    </table>
+    {% if child.notes %}
+    <div class="divider"></div>
+    <h3>Notes</h3>
+    <p class="small">{{ child.notes }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Update stage</h2></div>
+    {{ stage_form(child) }}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Stage change log</h2></div>
+  {% if child.stage_events %}
+  <table>
+    <thead><tr><th>Date</th><th>Change</th><th>Reason / note</th><th>By</th></tr></thead>
+    <tbody>
+      {% for event in child.stage_events %}
+      <tr>
+        <td class="small">{{ event.occurred_on | display_date }}</td>
+        <td class="small">{{ event.from_label }} → <strong>{{ event.to_label }}</strong></td>
+        <td class="small">
+          {% if event.reason %}<strong>{{ event.reason }}</strong>{% endif %}
+          {% if event.note %}<div class="muted">{{ event.note }}</div>{% endif %}
+          {% if not event.reason and not event.note %}<span class="muted">—</span>{% endif %}
+        </td>
+        <td class="small muted">{{ event.user.name if event.user else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No stage changes recorded.</p>
+  {% endif %}
+</div>
+
+{% if child.interactions %}
+<div class="card">
+  <div class="card-head">
+    <h2>Contact log for this student</h2>
+    <a class="small" href="{{ url_for('families.detail', family_id=child.family_id) }}">Log a contact →</a>
+  </div>
+  <table>
+    <thead><tr><th>Date</th><th>Type</th><th>What happened</th><th>By</th></tr></thead>
+    <tbody>
+      {% for item in child.interactions %}
+      <tr>
+        <td class="small">{{ item.occurred_on | display_date }}</td>
+        <td class="small">{{ item.interaction_type }}</td>
+        <td class="small">{% if item.summary %}<strong>{{ item.summary }}</strong>{% endif %}
+          {% if item.body %}<div class="muted">{{ item.body }}</div>{% endif %}</td>
+        <td class="small muted">{{ item.user.name if item.user else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head"><h3>Danger zone</h3></div>
+  <p class="small muted">Deleting a student removes their funnel history permanently.</p>
+  <form method="post" action="{{ url_for('children.delete', child_id=child.id) }}"
+        onsubmit="return confirm('Permanently delete {{ child.full_name }}?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn danger" type="submit">Delete this student</button>
+  </form>
+</div>
+{% endblock %}
