@@ -58,6 +58,8 @@ with access controls and audit logging to match.
 
 You need Python 3.11 or newer.
 
+### macOS / Linux
+
 ```bash
 # 1. Install dependencies into a local environment
 python3 -m venv .venv
@@ -66,7 +68,7 @@ python3 -m venv .venv
 # 2. Create your configuration file
 cp .env.example .env
 
-# 3. Generate a secret key and paste it into .env as SECRET_KEY=
+# 3. Generate a secret key, then paste it into .env as SECRET_KEY=
 python3 -c "import secrets; print(secrets.token_hex(32))"
 
 # 4. Create the first staff account (this also creates the database)
@@ -77,14 +79,52 @@ export FLASK_APP=wsgi.py
 .venv/bin/python wsgi.py
 ```
 
-Then open **http://127.0.0.1:5000** and sign in.
+### Windows (PowerShell)
+
+Windows puts virtual-environment programs in `.venv\Scripts\`, not `.venv/bin/`.
+Otherwise the steps are identical.
+
+```powershell
+# 1. Install dependencies into a local environment
+py -3 -m venv .venv
+.\.venv\Scripts\pip install -r requirements.txt
+
+# 2. Create your configuration file
+Copy-Item .env.example .env
+
+# 3. Generate a secret key, then paste it into .env as SECRET_KEY=
+python -c "import secrets; print(secrets.token_hex(32))"
+
+# 4. Create the first staff account (this also creates the database)
+$env:FLASK_APP = "wsgi.py"
+.\.venv\Scripts\flask create-user
+
+# 5. Start it
+.\.venv\Scripts\python wsgi.py
+```
+
+Notes for Windows:
+
+- The `.\` prefix is required by PowerShell to run a program from the current folder.
+- Calling the programs directly, as above, avoids needing `Activate.ps1`, which
+  PowerShell's default execution policy blocks.
+- If `py -3` is not recognized, use `python`. If that opens the Microsoft Store,
+  Python is not installed -- install it from python.org and tick
+  "Add Python to PATH".
+- Dates display as `Mar 04, 2026` rather than `Mar 4, 2026`, because Windows does
+  not support the day-without-padding format. Cosmetic only.
+
+### Either platform
+
+Then open **http://127.0.0.1:5000** and sign in with the account you just created.
+Press `Ctrl+C` in the terminal to stop the server.
 
 ### Optional: load demo data
 
 To see the funnel and reports populated before entering real families:
 
 ```bash
-.venv/bin/flask seed-demo
+.venv/bin/flask seed-demo          # Windows: .\.venv\Scripts\flask seed-demo
 ```
 
 This creates 12 fictional families and 25 students spread across every stage.
@@ -153,6 +193,8 @@ deliberately leaves out:
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python -m pytest          # 39 tests
 ```
+
+On Windows, substitute `.\.venv\Scripts\` for `.venv/bin/` throughout.
 
 Layout:
 
