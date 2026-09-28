@@ -49,6 +49,23 @@ CLOSED_STAGES = {Stage.GRADUATED, Stage.DECLINED, Stage.WITHDREW}
 # Stages where the student is in our care right now.
 ENROLLED_STAGES = {Stage.ENROLLED, Stage.ACTIVE}
 
+# The open pipeline: prospects still being worked, who have not yet enrolled.
+# Enrolled and Active are deliberately excluded -- those students are already
+# won, and are reported under "currently enrolled" instead.
+PROSPECT_STAGES = [
+    Stage.INQUIRY,
+    Stage.CONTACTED,
+    Stage.TOUR_SCHEDULED,
+    Stage.TOUR_COMPLETED,
+    Stage.WAITLIST,
+]
+
+# The school year runs April 1 through March 31 of the following year.
+# Using the 31st rather than the 30th means every date belongs to exactly one
+# school year, with no orphaned day between them.
+SCHOOL_YEAR_START_MONTH = 4
+SCHOOL_YEAR_START_DAY = 1
+
 STAGE_LABELS = {
     Stage.INQUIRY: "Inquiry",
     Stage.CONTACTED: "Contacted",

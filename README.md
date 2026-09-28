@@ -44,6 +44,26 @@ with access controls and audit logging to match.
 
 ## Reports
 
+The dashboard funnel covers the **current school year, April 1 through March 31**.
+The stat tiles marked "this school year" follow the same window, anchored on when
+each family first inquired.
+
+Two tiles deliberately ignore that window, because they answer "what is true right
+now" rather than "how did this year go":
+
+- **Open pipeline** — students in Inquiry, Contacted, Tour Scheduled, Tour
+  Completed, or Waitlist. Enrolled and Active students are excluded; they are
+  already won and are counted under *Currently enrolled* instead. A family who
+  inquired last school year and is still touring is still live work, so they stay
+  counted here after the year rolls over.
+- **Currently enrolled** — students in Enrolled or Active.
+
+To change when the school year starts, edit `SCHOOL_YEAR_START_MONTH` and
+`SCHOOL_YEAR_START_DAY` in `app/constants.py`. To change which stages count as
+open pipeline, edit `PROSPECT_STAGES` in the same file.
+
+Everything else:
+
 - Conversion funnel with step-by-step rates, and inquiry → enrolled overall
 - Why families declined, and separately, why families withdrew
 - Which referral sources actually produce enrollments

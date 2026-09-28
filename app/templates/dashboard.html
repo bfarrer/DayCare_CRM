@@ -6,7 +6,8 @@
 <div class="page-head">
   <div>
     <h1>Enrollment dashboard</h1>
-    <p>{{ summary.total }} students tracked across {{ total_families }} families.</p>
+    <p>{{ live.total_students }} students tracked across {{ total_families }} families.
+       School year {{ school_year.label }} runs {{ school_year.start | display_date }} to {{ school_year.end | display_date }}.</p>
   </div>
   <div class="tag-list">
     <a class="btn" href="{{ url_for('children.create') }}">Add student</a>
@@ -17,44 +18,53 @@
 <div class="stats">
   <div class="stat">
     <div class="stat-label">Open pipeline</div>
-    <div class="stat-value">{{ summary.open_pipeline }}</div>
-    <div class="stat-note">Not yet enrolled, declined, or graduated</div>
+    <div class="stat-value">{{ live.open_pipeline }}</div>
+    <div class="stat-note">Inquiry through Waitlist · live now, all years</div>
   </div>
   <div class="stat green">
     <div class="stat-label">Currently enrolled</div>
-    <div class="stat-value">{{ summary.currently_enrolled }}</div>
+    <div class="stat-value">{{ live.currently_enrolled }}</div>
     <div class="stat-note">Enrolled or actively attending</div>
+  </div>
+  <div class="stat neutral">
+    <div class="stat-label">Inquiries {{ school_year.label }}</div>
+    <div class="stat-value">{{ summary.inquiries }}</div>
+    <div class="stat-note">This school year</div>
   </div>
   <div class="stat green">
     <div class="stat-label">Inquiry → enrolled</div>
     <div class="stat-value">{{ summary.inquiry_to_enroll_rate }}%</div>
-    <div class="stat-note">{{ summary.enrolled }} of {{ summary.inquiries }} inquiries</div>
+    <div class="stat-note">{{ summary.enrolled }} of {{ summary.inquiries }} this school year</div>
   </div>
   <div class="stat neutral">
     <div class="stat-label">Avg. days to enroll</div>
     <div class="stat-value">{{ summary.avg_days_to_enroll if summary.avg_days_to_enroll is not none else '—' }}</div>
-    <div class="stat-note">From first inquiry to enrollment</div>
+    <div class="stat-note">This school year</div>
   </div>
   <div class="stat">
     <div class="stat-label">Declined</div>
     <div class="stat-value">{{ summary.declined }}</div>
-    <div class="stat-note">Chose not to enroll</div>
+    <div class="stat-note">This school year</div>
   </div>
   <div class="stat">
     <div class="stat-label">Withdrew</div>
     <div class="stat-value">{{ summary.withdrew }}</div>
-    <div class="stat-note">Left after enrolling</div>
+    <div class="stat-note">This school year</div>
   </div>
 </div>
 
 <div class="grid grid-2">
   <div class="card">
     <div class="card-head">
-      <h2>Funnel</h2>
-      <a class="small" href="{{ url_for('reports.index') }}">Full reports →</a>
+      <h2>Funnel · {{ school_year.label }}</h2>
+      <a class="small" href="{{ url_for('reports.index', start=school_year.start | date_input, end=school_year.end | date_input) }}">Full reports →</a>
     </div>
-    <p class="hint" style="margin-top:-8px">How many students have ever reached each stage, including those who later declined or withdrew.</p>
+    <p class="hint" style="margin-top:-8px">
+      Families who first inquired between {{ school_year.start | display_date }} and {{ school_year.end | display_date }}.
+      Counts how many ever reached each stage, so a family who toured and later declined still counts as having toured.
+    </p>
     {% set max_reach = funnel[0].count if funnel and funnel[0].count else 1 %}
+    {% if summary.inquiries == 0 %}<p class="empty">No families have inquired yet this school year.</p>{% endif %}
     <div class="chart">
       {% for row in funnel %}
         {{ bar_row(row.label, row.count, max_reach, row.pct_of_inquiries ~ '%', 'green' if loop.index0 >= 3 else none) }}
@@ -64,6 +74,7 @@
 
   <div class="card">
     <div class="card-head"><h2>Where everyone stands</h2></div>
+    <p class="hint" style="margin-top:-8px">Every student on file, all school years.</p>
     <table>
       <thead><tr><th>Stage</th><th class="num">Students</th></tr></thead>
       <tbody>
