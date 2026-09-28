@@ -18,12 +18,42 @@ families along. Neon's free plan does not expire.
 
 ---
 
+## Who should own the accounts
+
+**Use a daycare email address for both Render and Neon, not a personal one.**
+
+Whoever owns these accounts owns the data. Under a personal login, the daycare
+ends up with a CRM it cannot administer, back up, or recover passwords for the
+moment that person steps back. The developer can still do the work; the accounts
+just need to belong to the organization.
+
+Neither account needs a GitHub identity to exist:
+
+- **Neon** never touches the repository. Email sign-up, nothing else.
+- **Render** takes an email sign-up, and connecting a GitHub account is a
+  separate step afterwards. Connecting one gives automatic deploys when the
+  branch is pushed. Because this repository is public, Render can alternatively
+  deploy straight from its URL with no GitHub account attached at all, at the
+  cost of deploying manually instead of on push.
+
+Three things to settle before signing up:
+
+1. **The free Render workspace has one seat.** One login, not one per person.
+   Keep those credentials in a password manager the *daycare* owns.
+2. **Decide who holds two-factor authentication**, and store the recovery codes
+   somewhere the daycare controls. 2FA tied to a phone that leaves with a
+   person is how organizations lock themselves out.
+3. **That mailbox becomes a master key.** Password resets for both services go
+   there, and Neon holds the database, so anyone who can read the inbox can
+   reach every family record. Avoid a widely-read shared inbox, or put 2FA on
+   the mailbox itself. This matters more than the app's own sign-in screen.
+
 ## Before you start
 
 You need:
 
 - The GitHub repository (you have it)
-- An email address for two free accounts
+- A daycare email address for two free accounts -- see above
 - Your local clone working, with `.venv` installed
 
 Your local `.venv` doubles as the admin tool for production: it is how you will
@@ -54,8 +84,10 @@ can read every family record.
 
 ## Step 2 — Create the web service (Render)
 
-1. Go to **render.com** and sign up with GitHub.
-2. **New → Web Service**, then connect your `DayCare_CRM` repository.
+1. Go to **render.com** and sign up **with the daycare email address**.
+2. **New → Web Service**, then either connect the GitHub account that can see
+   `DayCare_CRM`, or paste the repository's public URL to skip the GitHub
+   connection entirely.
 3. Set:
 
    | Field | Value |
