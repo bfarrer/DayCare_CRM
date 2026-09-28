@@ -3,7 +3,7 @@
 from collections import Counter, OrderedDict
 from datetime import date, timedelta
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from .constants import (
     CLOSED_STAGES,
@@ -43,6 +43,36 @@ def school_year_bounds(today=None):
 def school_year_label(start):
     """'2026-27' for a school year beginning in April 2026."""
     return f"{start.year}\u2013{str(start.year + 1)[-2:]}"
+
+
+def available_school_years(today=None):
+    """Every school year worth offering in the dashboard selector.
+
+    Runs from the year of the earliest recorded inquiry through the current
+    one, newest first. The current year is always included, even before any
+    family has inquired in it, so the selector is never empty.
+    """
+    today = today or date.today()
+    current_start, _ = school_year_bounds(today)
+
+    earliest = db.session.query(func.min(Child.inquiry_date)).scalar()
+    earliest_start = school_year_bounds(earliest)[0] if earliest else current_start
+    # A stored date could sit in the future; never offer past the current year.
+    first_year = min(earliest_start.year, current_start.year)
+
+    years = []
+    for start_year in range(current_start.year, first_year - 1, -1):
+        start, end = school_year_bounds(date(start_year, SCHOOL_YEAR_START_MONTH, SCHOOL_YEAR_START_DAY))
+        years.append(
+            {
+                "start_year": start_year,
+                "start": start,
+                "end": end,
+                "label": school_year_label(start),
+                "is_current": start_year == current_start.year,
+            }
+        )
+    return years
 
 
 def children_in_window(start=None, end=None):
@@ -249,7 +279,7 @@ def search_children(term=None, stage=None):
     return query.order_by(Child.last_name, Child.first_name).all()
 
 
-def dashboard_context(today=None):
+def dashboard_context(today=None, school_year_start=None):
     """Everything the dashboard needs, in one call.
 
     Two different questions share this page, so they use two different sets:
@@ -264,7 +294,13 @@ def dashboard_context(today=None):
       page when the school year rolls over.
     """
     today = today or date.today()
-    year_start, year_end = school_year_bounds(today)
+    years = available_school_years(today)
+
+    # Fall back to the current year when the request names one we do not offer.
+    selected = next((y for y in years if y["start_year"] == school_year_start), None)
+    if selected is None:
+        selected = next(y for y in years if y["is_current"])
+    year_start, year_end = selected["start"], selected["end"]
 
     all_children = Child.query.all()
     year_children = children_in_window(start=year_start, end=year_end)
@@ -282,9 +318,6 @@ def dashboard_context(today=None):
         "follow_ups": needs_follow_up(today=today),
         "monthly": monthly_inquiries(today=today),
         "total_families": db.session.query(Family).count(),
-        "school_year": {
-            "start": year_start,
-            "end": year_end,
-            "label": school_year_label(year_start),
-        },
+        "school_year": selected,
+        "school_years": years,
     }

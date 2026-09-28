@@ -7,7 +7,9 @@
   <div>
     <h1>Enrollment dashboard</h1>
     <p>{{ live.total_students }} students tracked across {{ total_families }} families.
-       School year {{ school_year.label }} runs {{ school_year.start | display_date }} to {{ school_year.end | display_date }}.</p>
+       Showing school year {{ school_year.label }}
+       ({{ school_year.start | display_date }} – {{ school_year.end | display_date }}){% if not school_year.is_current %},
+       which is not the current year{% endif %}.</p>
   </div>
   <div class="tag-list">
     <a class="btn" href="{{ url_for('children.create') }}">Add student</a>
@@ -29,46 +31,62 @@
   <div class="stat neutral">
     <div class="stat-label">Inquiries {{ school_year.label }}</div>
     <div class="stat-value">{{ summary.inquiries }}</div>
-    <div class="stat-note">This school year</div>
+    <div class="stat-note">School year {{ school_year.label }}</div>
   </div>
   <div class="stat green">
     <div class="stat-label">Inquiry → enrolled</div>
     <div class="stat-value">{{ summary.inquiry_to_enroll_rate }}%</div>
-    <div class="stat-note">{{ summary.enrolled }} of {{ summary.inquiries }} this school year</div>
+    <div class="stat-note">{{ summary.enrolled }} of {{ summary.inquiries }} in {{ school_year.label }}</div>
   </div>
   <div class="stat neutral">
     <div class="stat-label">Avg. days to enroll</div>
     <div class="stat-value">{{ summary.avg_days_to_enroll if summary.avg_days_to_enroll is not none else '—' }}</div>
-    <div class="stat-note">This school year</div>
+    <div class="stat-note">School year {{ school_year.label }}</div>
   </div>
   <div class="stat">
     <div class="stat-label">Declined</div>
     <div class="stat-value">{{ summary.declined }}</div>
-    <div class="stat-note">This school year</div>
+    <div class="stat-note">School year {{ school_year.label }}</div>
   </div>
   <div class="stat">
     <div class="stat-label">Withdrew</div>
     <div class="stat-value">{{ summary.withdrew }}</div>
-    <div class="stat-note">This school year</div>
+    <div class="stat-note">School year {{ school_year.label }}</div>
   </div>
 </div>
 
 <div class="grid grid-2">
   <div class="card">
     <div class="card-head">
-      <h2>Funnel · {{ school_year.label }}</h2>
-      <a class="small" href="{{ url_for('reports.index', start=school_year.start | date_input, end=school_year.end | date_input) }}">Full reports →</a>
+      <h2>Funnel</h2>
+      <div class="tag-list" style="align-items:center">
+        <form method="get" action="{{ url_for('dashboard.index') }}" class="year-picker">
+          <label for="school_year" class="visually-hidden">School year</label>
+          <select id="school_year" name="school_year" onchange="this.form.submit()">
+            {% for year in school_years %}
+            <option value="{{ year.start_year }}" {{ 'selected' if year.start_year == school_year.start_year }}>
+              {{ year.label }}{{ ' (current)' if year.is_current }}
+            </option>
+            {% endfor %}
+          </select>
+          <noscript><button class="btn secondary small" type="submit">View</button></noscript>
+        </form>
+        <a class="small" href="{{ url_for('reports.index', start=school_year.start | date_input, end=school_year.end | date_input) }}">Full reports →</a>
+      </div>
     </div>
     <p class="hint" style="margin-top:-8px">
       Families who first inquired between {{ school_year.start | display_date }} and {{ school_year.end | display_date }}.
       Counts how many ever reached each stage, so a family who toured and later declined still counts as having toured.
     </p>
     {% set max_reach = funnel[0].count if funnel and funnel[0].count else 1 %}
-    {% if summary.inquiries == 0 %}<p class="empty">No families have inquired yet this school year.</p>{% endif %}
+    {% if summary.inquiries == 0 %}
+    <p class="empty">No families inquired in {{ school_year.label }}{{ ' yet' if school_year.is_current }}.</p>
+    {% else %}
     <div class="chart">
       {% for row in funnel %}
         {{ bar_row(row.label, row.count, max_reach, row.pct_of_inquiries ~ '%', 'green' if loop.index0 >= 3 else none) }}
       {% endfor %}
+    {% endif %}
     </div>
   </div>
 

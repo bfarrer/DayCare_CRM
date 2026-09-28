@@ -44,9 +44,14 @@ with access controls and audit logging to match.
 
 ## Reports
 
-The dashboard funnel covers the **current school year, April 1 through March 31**.
-The stat tiles marked "this school year" follow the same window, anchored on when
-each family first inquired.
+The dashboard funnel covers the **current school year, April 1 through March 31**,
+anchored on when each family first inquired. The window rolls over on its own --
+on April 1 the funnel resets to the new year, and nothing is deleted.
+
+A **year selector** on the funnel card switches between school years. It offers
+every year from the earliest recorded inquiry through the current one, and the
+stat tiles, the funnel, and the "Full reports" link all follow the selection.
+The header says plainly when you are looking at a year other than the current one.
 
 Two tiles deliberately ignore that window, because they answer "what is true right
 now" rather than "how did this year go":

@@ -126,3 +126,71 @@ def test_a_march_thirty_first_inquiry_is_not_lost(db, family):
     assert dashboard_context(today=date(2027, 3, 31))["summary"]["inquiries"] == 1
     # ...and not carried into the next year.
     assert dashboard_context(today=date(2027, 4, 1))["summary"]["inquiries"] == 0
+
+
+def test_available_years_span_from_the_earliest_inquiry(db, family):
+    create_child(family=family, first_name="Old", last_name="Test", inquiry_date=date(2024, 6, 1))
+    create_child(family=family, first_name="New", last_name="Test", inquiry_date=date(2026, 6, 1))
+    db.session.commit()
+
+    from app.reporting import available_school_years
+
+    years = available_school_years(today=date(2026, 9, 28))
+
+    # Newest first, contiguous, with no gap for the year that had no inquiries.
+    assert [y["label"] for y in years] == ["2026–27", "2025–26", "2024–25"]
+    assert years[0]["is_current"] is True
+    assert years[1]["is_current"] is False
+
+
+def test_available_years_is_never_empty_on_a_fresh_database(db):
+    from app.reporting import available_school_years
+
+    years = available_school_years(today=date(2026, 9, 28))
+    assert len(years) == 1
+    assert years[0]["label"] == "2026–27"
+    assert years[0]["is_current"] is True
+
+
+def test_selecting_a_past_school_year(db, family):
+    create_child(family=family, first_name="Old", last_name="Test", inquiry_date=date(2025, 9, 1))
+    create_child(family=family, first_name="New", last_name="Test", inquiry_date=date(2026, 9, 1))
+    db.session.commit()
+
+    current = dashboard_context(today=date(2026, 9, 28))
+    past = dashboard_context(today=date(2026, 9, 28), school_year_start=2025)
+
+    assert current["summary"]["inquiries"] == 1
+    assert current["school_year"]["is_current"] is True
+    assert past["summary"]["inquiries"] == 1
+    assert past["school_year"]["label"] == "2025–26"
+    assert past["school_year"]["is_current"] is False
+    # Live counts describe right now, so they do not change with the selection.
+    assert past["live"]["open_pipeline"] == current["live"]["open_pipeline"] == 2
+
+
+def test_an_unknown_school_year_falls_back_to_the_current_one(db, family):
+    create_child(family=family, first_name="Now", last_name="Test", inquiry_date=date(2026, 9, 1))
+    db.session.commit()
+
+    for bogus in (1999, 9999, -1):
+        context = dashboard_context(today=date(2026, 9, 28), school_year_start=bogus)
+        assert context["school_year"]["label"] == "2026–27"
+        assert context["school_year"]["is_current"] is True
+
+
+def test_the_dashboard_renders_a_selected_year(auth_client, db):
+    from app.models import Family
+
+    family = Family(family_name="The Test Family")
+    db.session.add(family)
+    db.session.commit()
+    auth_client.post(
+        "/students/new",
+        data={"first_name": "Mei", "last_name": "Test", "family_id": family.id},
+        follow_redirects=True,
+    )
+
+    assert auth_client.get("/?school_year=2025").status_code == 200
+    # A non-numeric value must not raise.
+    assert auth_client.get("/?school_year=banana").status_code == 200

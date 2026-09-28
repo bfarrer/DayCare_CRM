@@ -295,3 +295,11 @@ legend { font-family: var(--font-head); font-size: 1.1rem; letter-spacing: 0.04e
   body { background: #fff; }
   .card { box-shadow: none; border-color: #ccc; break-inside: avoid; }
 }
+
+/* School-year picker on the dashboard funnel. */
+.year-picker { display: inline-flex; gap: 6px; align-items: center; }
+.year-picker select { width: auto; padding: 4px 8px; font-size: 0.85rem; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
