@@ -211,8 +211,81 @@ Remove-Item Env:DATABASE_URL
 
 This writes one timestamped JSON file containing every record.
 
-**Do weekly, and before any change to the app.** Set a calendar reminder; it
-takes ten seconds.
+**Do weekly, and before any change to the app.**
+
+### Automating the weekly backup (Windows)
+
+`scripts\backup.ps1` runs the backup, checks the file it produced is a
+readable backup rather than a truncated one, deletes all but the newest twelve,
+and logs the outcome. `scripts\Register-BackupTask.ps1` schedules it.
+
+**1. Put the connection string somewhere outside the project folder**, so it
+cannot be committed:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.daycare-crm" | Out-Null
+notepad "$env:USERPROFILE\.daycare-crm\backup.env"
+```
+
+One line, no quotes:
+
+```
+DATABASE_URL=postgresql://neondb_owner:PASSWORD@ep-....neon.tech/neondb?sslmode=require&channel_binding=require
+```
+
+**2. Run it once by hand** before scheduling anything:
+
+```powershell
+cd D:\source\DayCare_CRM
+.\scripts\backup.ps1
+```
+
+It should finish with `Backup complete.` and a line listing the row counts.
+
+**3. Schedule it:**
+
+```powershell
+.\scripts\Register-BackupTask.ps1
+```
+
+Defaults to Sunday at 19:00, writing to `Documents\crm-backups`. Change with
+`-DayOfWeek Friday -Time "17:30"`. Then confirm it works as a scheduled task,
+not just by hand:
+
+```powershell
+Start-ScheduledTask -TaskName 'DaycareCRM-WeeklyBackup'
+Get-Content "$env:USERPROFILE\Documents\crm-backups\backup-log.txt" -Tail 20
+```
+
+Notes on how it is set up:
+
+- The task runs **as you, when logged on**, so no Windows password is stored in
+  Task Scheduler. If the machine is off at the scheduled time, the task runs at
+  the next opportunity instead of skipping the week.
+- The database URL is read from the config file into that one process and
+  cleared immediately after, so it never affects an interactive shell pointed
+  at the local SQLite database.
+- **The log records the database host but never the password.**
+- Any failure -- missing config, unreadable URL, unreachable database, a backup
+  file that will not parse -- exits non-zero and writes `BACKUP FAILED` to the
+  log, so a broken backup does not look like a successful one.
+
+**Check the log every few weeks.** A scheduled backup that has been failing
+silently is the worst of both worlds, because it feels like protection.
+
+### Test a restore, once a quarter
+
+A backup nobody has restored is not a backup. Create a scratch database in
+Neon, restore into it, sign in, and confirm the records are there:
+
+```powershell
+$env:DATABASE_URL = "postgresql://...scratch database..."
+.\.venv\Scripts\flask db upgrade
+.\.venv\Scripts\flask restore "$env:USERPROFILE\Documents\crm-backups\daycare-crm-backup-....json"
+Remove-Item Env:DATABASE_URL
+```
+
+Delete the scratch database afterwards -- it holds a full copy of family data.
 
 The backup file **contains family data and password hashes**. Keep it out of the
 project folder -- the command above writes to Documents for exactly that reason

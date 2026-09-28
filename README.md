@@ -249,6 +249,10 @@ Restore refuses to run against a database that already holds records unless
 passed `--force`. Backup files contain family data and password hashes -- keep
 them outside the project folder and somewhere access-controlled.
 
+On Windows, `scripts\backup.ps1` wraps this with verification, retention and
+logging, and `scripts\Register-BackupTask.ps1` schedules it weekly. See
+[DEPLOYMENT.md](DEPLOYMENT.md).
+
 ### The older notes on moving off SQLite
 
 This prototype runs on one machine, so only one person can use it at a time.

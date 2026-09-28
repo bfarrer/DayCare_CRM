@@ -12,7 +12,10 @@
 #
 # Enable it once per clone:   git config core.hooksPath .githooks
 
-PATTERN='(^|/)instance/|(^|/)backups?/|(^|/)exports?/|\.sqlite[0-9]*$|\.db$|(^|/)\.env$|\.csv$|\.bak$|\.dump$|[-_]backup|backup[-_]'
+# Data locations and data file types are blocked outright. The name-based
+# rule ("...backup...") is deliberately limited to data extensions, so that
+# source files such as scripts/Register-BackupTask.ps1 are not caught by it.
+PATTERN='(^|/)instance/|(^|/)backups?/|(^|/)exports?/|\.sqlite[0-9]*$|\.db$|(^|/)\.env$|\.csv$|\.bak$|\.dump$|backup.*\.(json|zip|gz|sql|tar)$'
 
 blocked=$(git diff --cached --name-only | grep -iE "$PATTERN")
 
