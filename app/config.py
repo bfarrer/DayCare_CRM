@@ -26,6 +26,9 @@ class Config:
 
     WTF_CSRF_TIME_LIMIT = None
 
+    # Set DAYCARE_NAME in .env (local) or the host's environment variables
+    # (production) to the real name. It is deliberately not committed, so the
+    # daycare's name never appears in the repository.
     DAYCARE_NAME = os.environ.get("DAYCARE_NAME", "Daycare CRM")
 
 

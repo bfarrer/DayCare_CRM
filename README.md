@@ -252,6 +252,11 @@ separation. Because the brand green is light against white, every chart bar is
 directly labeled with its value and every chart is backed by a data table — no
 figure depends on color alone.
 
-To use the real logo, drop your logo file into `app/static/img/` and
-replace the `RF` circle in `app/templates/base.html`. Note the existing file is an
-upscaled screengrab — get the original artwork for anything printed.
+The daycare's name is **not** stored in the code. Set `DAYCARE_NAME` in `.env`
+locally, and in the host's environment variables in production; it appears in the
+header, page titles, and the sign-in screen. This keeps the name out of the
+repository, which matters while the repository is public.
+
+To use the real logo, drop the logo file into `app/static/img/` and replace the
+initials circle in `app/templates/base.html`. If your source file is an upscaled
+screengrab, get the original artwork before using it for anything printed.

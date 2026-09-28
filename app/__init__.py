@@ -1,4 +1,4 @@
-"""Application factory for the Daycare Enrollment CRM."""
+"""Application factory for the daycare enrollment CRM."""
 
 import os
 import warnings
