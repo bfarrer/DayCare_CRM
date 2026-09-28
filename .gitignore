@@ -7,11 +7,24 @@ venv/
 .pytest_cache/
 .coverage
 
-# Local database + secrets — never commit real family data
+# Local database + secrets — never commit real family data.
+# The repository is public, so anything matching these must never be tracked.
 instance/
 *.db
-*.sqlite3
+*.sqlite*
 .env
+.env.*
+!.env.example
+
+# Data that leaves the app: CSV exports, database backups, screenshots of
+# real records. These land in the project folder by accident more often
+# than anything else.
+*.csv
+*.bak
+backups/
+exports/
+*_backup*
+screenshots/
 
 # Editors / OS
 .vscode/

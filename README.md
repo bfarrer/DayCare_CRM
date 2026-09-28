@@ -164,6 +164,32 @@ Everyone has the same permissions: all staff can view and edit every record.
 
 ---
 
+## Keeping family data out of the repository
+
+**This repository is public.** No family data has ever been committed to it, and
+two things keep it that way:
+
+1. **`.gitignore`** excludes the database, `.env`, CSV exports, and backups.
+2. **A pre-commit hook** refuses any commit containing those files, including one
+   forced past `.gitignore` with `git add -f`.
+
+Enable the hook once per clone -- it is not automatic:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Check it is on with `git config core.hooksPath`, which should print `.githooks`.
+
+If a database or CSV export is ever committed, treat the families in it as
+published. Deleting the file in a later commit does not remove it from history,
+and rewriting history does not reliably un-publish what others may already have
+fetched or what search engines have indexed. Prevention is the only real control,
+which is why the hook exists.
+
+Two habits matter as much as the tooling: save CSV exports somewhere outside the
+project folder, and keep database backups outside it too.
+
 ## Your data
 
 The entire database is one file: **`instance/daycare_crm.sqlite3`**.
