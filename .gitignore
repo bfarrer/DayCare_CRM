@@ -30,3 +30,8 @@ screenshots/
 .vscode/
 .idea/
 .DS_Store
+
+# Alembic writes nothing here that should be ignored, but keep stray
+# local database dumps out regardless.
+*.dump
+*.sql

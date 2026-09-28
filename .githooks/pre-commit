@@ -3,21 +3,25 @@
 #
 # .gitignore stops accidents; this stops deliberate ones too ("git add -f")
 # and anything .gitignore misses. The repository is public, so a single
-# committed database or CSV export would publish real families' names,
-# addresses and phone numbers permanently -- rewriting history does not
-# reliably un-publish what has already been fetched or indexed.
+# committed database, backup or CSV export would publish real families'
+# names, addresses and phone numbers permanently -- rewriting history does
+# not reliably un-publish what has already been fetched or indexed.
+#
+# The pattern must stay on one line: a newline inside it becomes an empty
+# alternative, which matches every path and blocks all commits.
 #
 # Enable it once per clone:   git config core.hooksPath .githooks
 
-blocked=$(git diff --cached --name-only |
-  grep -iE '(^|/)instance/|\.sqlite[0-9]*$|\.db$|^\.env$|(^|/)\.env$|\.csv$|_backup|\.bak$')
+PATTERN='(^|/)instance/|(^|/)backups?/|(^|/)exports?/|\.sqlite[0-9]*$|\.db$|(^|/)\.env$|\.csv$|\.bak$|\.dump$|[-_]backup|backup[-_]'
+
+blocked=$(git diff --cached --name-only | grep -iE "$PATTERN")
 
 if [ -n "$blocked" ]; then
   echo "BLOCKED: these files may contain family data and must not be committed:" >&2
   echo "$blocked" | sed 's/^/  /' >&2
   echo "" >&2
-  echo "This repository is public. If a database or export is committed, the" >&2
-  echo "families in it are published permanently." >&2
+  echo "This repository is public. If a database, backup or export is" >&2
+  echo "committed, the families in it are published permanently." >&2
   echo "" >&2
   echo "Remove them from the commit with:" >&2
   echo "  git restore --staged <file>" >&2

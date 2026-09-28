@@ -204,7 +204,52 @@ The entire database is one file: **`instance/daycare_crm.sqlite3`**.
 
 ---
 
-## Going multi-user
+## Going to production
+
+**See [DEPLOYMENT.md](DEPLOYMENT.md)** for the full click-by-click runbook:
+the app on Render's free plan, the database on Neon's free plan, $0/month.
+
+In short: `DATABASE_URL` points at PostgreSQL, Alembic migrations create and
+update the schema, Gunicorn serves the app, and `DAYCARE_NAME` supplies the
+daycare's name from the environment so it stays out of this public repository.
+
+Two commands you will run from your own machine against the production
+database, since Render's free plan provides no server shell:
+
+```bash
+DATABASE_URL="postgresql://...neon..." flask create-user   # add staff
+DATABASE_URL="postgresql://...neon..." flask backup        # take a backup
+```
+
+### Database migrations
+
+The local SQLite prototype creates its own tables on first run. Any PostgreSQL
+database uses Alembic instead -- `db.create_all()` cannot alter existing
+tables, so relying on it would silently skip every future schema change.
+
+```bash
+flask db migrate -m "what changed"   # generate, then READ the generated file
+flask db upgrade                     # apply
+```
+
+Render runs `flask db upgrade` on every start, which is a no-op when the
+database is already current.
+
+### Backups
+
+Neon's free plan has no managed backups, so take your own weekly and before
+any deploy that changes the schema:
+
+```bash
+flask backup --output-dir ~/crm-backups   # every record, one JSON file
+flask restore path/to/backup.json         # into an empty database
+```
+
+Restore refuses to run against a database that already holds records unless
+passed `--force`. Backup files contain family data and password hashes -- keep
+them outside the project folder and somewhere access-controlled.
+
+### The older notes on moving off SQLite
 
 This prototype runs on one machine, so only one person can use it at a time.
 When the team needs shared access, the change is:
@@ -226,15 +271,11 @@ When the team needs shared access, the change is:
 No application code needs to change. The models avoid SQLite-specific types
 for exactly this reason.
 
-Two things worth adding before real multi-user use, which this prototype
-deliberately leaves out:
+One thing this deliberately still leaves out:
 
-- **Database migrations** (Alembic / Flask-Migrate). Right now the schema is
-  created with `db.create_all()`, which creates missing tables but does not alter
-  existing ones. That is fine while the schema is settling; it is not fine once
-  several people depend on the data.
-- **Permission levels**, if you later decide not everyone should be able to
-  delete records or manage accounts.
+- **Permission levels.** Every signed-in user can view, edit, and delete every
+  record, and can add teammates. That suits a small trusted team; revisit it if
+  the staff list grows.
 
 ---
 
@@ -242,7 +283,11 @@ deliberately leaves out:
 
 ```bash
 .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/python -m pytest          # 39 tests
+.venv/bin/python -m pytest          # 55 tests
+
+# Run the same suite against PostgreSQL, to catch anything SQLite tolerates:
+TEST_DATABASE_URL="postgresql+psycopg://user:pw@localhost:5432/crm_test" \
+  .venv/bin/python -m pytest
 ```
 
 On Windows, substitute `.\.venv\Scripts\` for `.venv/bin/` throughout.

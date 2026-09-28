@@ -22,7 +22,7 @@
   <div class="field-row">
     <div class="field">
       <label for="stage">Move to stage</label>
-      <select id="stage" name="stage" required onchange="toggleReason(this.value)">
+      <select id="stage" name="stage" required>
         {% for stage in PIPELINE_STAGES %}
         <option value="{{ stage }}" {{ 'selected' if stage == child.stage }}>{{ STAGE_LABELS[stage] }}</option>
         {% endfor %}
@@ -65,6 +65,10 @@
 
 <script>
   // Only one reason dropdown is ever enabled, so exactly one `reason` value posts.
+  //
+  // The listener is bound here rather than with an inline onchange attribute:
+  // an attribute is live as soon as the element is parsed, which is before
+  // this function exists, so an early change event would throw.
   function toggleReason(stage) {
     var map = { declined: 'reason-declined', withdrew: 'reason-withdrew' };
     ['reason-declined', 'reason-withdrew'].forEach(function (id) {
@@ -76,6 +80,12 @@
       select.required = show;
     });
   }
-  toggleReason(document.getElementById('stage').value);
+  (function () {
+    var stageSelect = document.getElementById('stage');
+    stageSelect.addEventListener('change', function () {
+      toggleReason(this.value);
+    });
+    toggleReason(stageSelect.value);
+  })();
 </script>
 {%- endmacro %}

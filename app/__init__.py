@@ -6,10 +6,11 @@ from datetime import date
 
 from dotenv import load_dotenv
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from . import constants
 from .config import Config
-from .extensions import csrf, db, login_manager
+from .extensions import csrf, db, login_manager, migrate
 from .utils import date_input, display_date
 
 
@@ -28,7 +29,13 @@ def create_app(config_object=Config):
             stacklevel=2,
         )
 
+    if app.config.get("BEHIND_PROXY"):
+        # One proxy hop (the host's load balancer). Without this, Flask sees
+        # http:// and would refuse to set the secure session cookie.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
 
@@ -55,8 +62,12 @@ def create_app(config_object=Config):
     _register_template_helpers(app)
     _register_cli(app)
 
-    with app.app_context():
-        db.create_all()
+    # The local SQLite prototype creates its tables on first run. Production
+    # uses Alembic migrations instead: create_all() cannot alter existing
+    # tables, so relying on it would silently skip every future schema change.
+    if app.config.get("AUTO_CREATE_TABLES"):
+        with app.app_context():
+            db.create_all()
 
     return app
 
@@ -107,6 +118,36 @@ def _register_cli(app):
         db.session.add(user)
         db.session.commit()
         click.echo(f"Created {email}.")
+
+    @app.cli.command("backup")
+    @click.option("--output-dir", default="backups", show_default=True,
+                  help="Where to write the backup file.")
+    def backup(output_dir):
+        """Write every record to a timestamped JSON file."""
+        from .backup import export_backup
+
+        path, counts = export_backup(output_dir)
+        click.echo(f"Wrote {path}")
+        for table, count in counts.items():
+            click.echo(f"  {table}: {count}")
+        click.echo("\nThis file contains family data and password hashes. "
+                   "Keep it out of the repository and somewhere access-controlled.")
+
+    @app.cli.command("restore")
+    @click.argument("path", type=click.Path(exists=True))
+    @click.option("--force", is_flag=True,
+                  help="Allow restoring into a database that already holds records.")
+    def restore(path, force):
+        """Restore records from a backup file."""
+        from .backup import import_backup
+
+        try:
+            counts = import_backup(path, allow_non_empty=force)
+        except RuntimeError as exc:
+            raise click.ClickException(str(exc))
+        click.echo(f"Restored from {path}")
+        for table, count in counts.items():
+            click.echo(f"  {table}: {count}")
 
     @app.cli.command("seed-demo")
     def seed_demo():

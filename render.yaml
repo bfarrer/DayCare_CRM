@@ -1,0 +1,62 @@
+# Render blueprint: app on Render, PostgreSQL on Neon.
+#
+# Render's own free PostgreSQL is deliberately NOT used here. It expires 30
+# days after creation and the data is deleted with it, which would take the
+# daycare's families with it. Neon's free tier does not expire.
+#
+# Set DATABASE_URL and DAYCARE_NAME by hand in the Render dashboard after the
+# first deploy; both are marked sync:false so they never live in this file.
+
+services:
+  - type: web
+    name: daycare-crm
+    runtime: python
+    plan: free
+    region: oregon
+    branch: claude/intelligent-dirac-c7l0mn
+
+    buildCommand: pip install -r requirements.txt
+
+    # Migrations run before the server starts. `flask db upgrade` is a no-op
+    # when the database is already current, so this is safe on every restart --
+    # and the free plan restarts often, since it sleeps when idle.
+    startCommand: >-
+      flask db upgrade &&
+      gunicorn wsgi:app
+      --bind 0.0.0.0:$PORT
+      --workers 2
+      --threads 4
+      --timeout 60
+      --access-logfile -
+      --error-logfile -
+
+    healthCheckPath: /healthz
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.15"
+
+      # Needed by `flask db upgrade` in the start command.
+      - key: FLASK_APP
+        value: wsgi.py
+
+      # Generated once by Render and kept across deploys. Never commit a real
+      # one: changing it signs every staff member out.
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Neon connection string. Set it in the dashboard, not here.
+      - key: DATABASE_URL
+        sync: false
+
+      # The daycare's real name. Set it in the dashboard, not here, so it
+      # stays out of the public repository.
+      - key: DAYCARE_NAME
+        sync: false
+
+      # Served over HTTPS, so session cookies must be HTTPS-only and the
+      # proxy's forwarded headers must be trusted.
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: BEHIND_PROXY
+        value: "1"
